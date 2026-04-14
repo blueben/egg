@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EGG — Chirp CSV Generator</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0d11;
+      --surface: #12151b;
+      --surface2: #181c24;
+      --border: #232731;
+      --amber: #e8a230;
+      --amber-lo: #6b4a14;
+      --green: #3dd68c;
+      --blue: #7a9fff;
+      --text: #b8bdc8;
+      --dim: #4a5060;
+      --bright: #edf0f6;
+      --danger: #e05c5c;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px;
+      min-height: 100vh;
+      padding: 28px 16px 60px;
+    }
+
+    /* ── HEADER ── */
+    .hdr {
+      max-width: 820px;
+      margin: 0 auto 28px;
+      display: flex;
+      align-items: baseline;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+
+    .hdr h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--amber);
+    }
+
+    .hdr span {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    /* ── STEP INDICATOR ── */
+    .stepper {
+      max-width: 820px;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: flex-start;
+    }
+
+    .step-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    .step-wrap::after {
+      content: '';
+      position: absolute;
+      top: 13px;
+      left: 50%;
+      right: -50%;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .step-wrap:last-child::after {
+      display: none;
+    }
+
+    .step-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      position: relative;
+      z-index: 1;
+      transition: all .2s;
+    }
+
+    .step-lbl {
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      text-align: center;
+    }
+
+    .step-wrap.active .step-dot {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: #000;
+    }
+
+    .step-wrap.active .step-lbl {
+      color: var(--amber);
+    }
+
+    .step-wrap.done .step-dot {
+      background: var(--surface2);
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .step-wrap.done .step-lbl {
+      color: var(--green);
+    }
+
+    /* ── CARD ── */
+    .card {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 28px;
+    }
+
+    .card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--bright);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 4px;
+    }
+
+    .sub {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      margin-bottom: 22px;
+    }
+
+    /* ── SERVICE CARDS ── */
+    .svc-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+
+    .svc-card {
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all .15s;
+      position: relative;
+    }
+
+    .svc-card:hover {
+      border-color: var(--amber-lo);
+    }
+
+    .svc-card.sel {
+      border-color: var(--amber);
+      background: rgba(232, 162, 48, .06);
+    }
+
+    .svc-card input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+    }
+
+    .svc-name {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .svc-full {
+      font-size: 13px;
+      color: var(--text);
+      margin: 4px 0 2px;
+    }
+
+    .svc-note {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    /* ── CHANNEL GRID ── */
+    .ch-ctrl {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .ch-ctrl .mono {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .btn-xs {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 3px 9px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--dim);
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all .15s;
+    }
+
+    .btn-xs:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .sect-hdr {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--amber);
+      padding: 14px 0 10px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+
+    #frsSect .sect-hdr {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .ch-group {
+      margin-bottom: 18px;
+    }
+
+    .ch-glbl {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--dim);
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+
+    .ch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+      gap: 5px;
+    }
+
+    .ch-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 9px;
+      background: var(--surface2);
+      border: 1px solid transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all .1s;
+      user-select: none;
+    }
+
+    .ch-item:hover {
+      border-color: var(--amber-lo);
+    }
+
+    .ch-item.sel {
+      border-color: var(--amber);
+      background: rgba(232, 162, 48, .07);
+    }
+
+    .ch-item input {
+      width: 13px;
+      height: 13px;
+      accent-color: var(--amber);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .ch-num {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--bright);
+      min-width: 28px;
+    }
+
+    .ch-freq {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+    }
+
+    .bdg {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: 2px 5px;
+      border-radius: 2px;
+      margin-left: auto;
+    }
+
+    .bdg-fg {
+      background: rgba(61, 214, 140, .12);
+      color: var(--green);
+    }
+
+    .bdg-gm {
+      background: rgba(232, 162, 48, .12);
+      color: var(--amber);
+    }
+
+    .bdg-nfm {
+      background: rgba(122, 159, 255, .14);
+      color: var(--blue);
+    }
+
+    .bdg-rep {
+      background: rgba(122, 159, 255, .14);
+      color: var(--blue);
+    }
+
+    /* ── DCS OPTIONS ── */
+    .dcs-opts {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      margin-bottom: 18px;
+    }
+
+    .r-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 11px 13px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .r-row:hover {
+      border-color: var(--amber-lo);
+    }
+
+    .r-row.sel {
+      border-color: var(--amber);
+      background: rgba(232, 162, 48, .06);
+    }
+
+    .r-row input {
+      accent-color: var(--amber);
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+
+    .r-lbl {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--bright);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .r-desc {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      margin-top: 3px;
+      line-height: 1.5;
+    }
+
+    /* ── FORM FIELDS ── */
+    .form-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--dim);
+    }
+
+    .field select,
+    .field input[type=text],
+    .field input[type=number] {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--bright);
+      padding: 6px 10px;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color .15s;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .field select:focus,
+    .field input:focus {
+      border-color: var(--amber);
+    }
+
+    .field select option {
+      background: var(--surface2);
+    }
+
+    /* ── CALLOUT ── */
+    .callout {
+      background: rgba(232, 162, 48, .06);
+      border-left: 3px solid var(--amber);
+      padding: 10px 13px;
+      border-radius: 0 3px 3px 0;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.65;
+      margin-bottom: 18px;
+    }
+
+    /* ── REPEATER TABLE ── */
+    .rep-tbl {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+    }
+
+    .rep-tbl th {
+      text-align: left;
+      padding: 7px 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--dim);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .rep-tbl td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, .03);
+    }
+
+    .rep-tbl tr:last-child td {
+      border-bottom: none;
+    }
+
+    .rep-tbl input[type=text],
+    .rep-tbl select {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--bright);
+      padding: 4px 7px;
+      border-radius: 2px;
+      outline: none;
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .rep-tbl input:focus,
+    .rep-tbl select:focus {
+      border-color: var(--amber);
+    }
+
+    .rep-tbl select option {
+      background: var(--surface2);
+    }
+
+    /* ── PREVIEW ── */
+    .preview {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 12px 14px;
+      overflow-x: auto;
+      max-height: 200px;
+      overflow-y: auto;
+      color: var(--dim);
+      line-height: 1.65;
+      margin-bottom: 18px;
+      white-space: pre;
+    }
+
+    .preview .hdr-row {
+      color: var(--amber);
+    }
+
+    .preview .data-row {
+      color: var(--text);
+    }
+
+    /* ── NAV BUTTONS ── */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 26px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+    }
+
+    .btn {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 10px 22px;
+      border-radius: 2px;
+      border: 1px solid;
+      cursor: pointer;
+      transition: all .15s;
+    }
+
+    .btn-primary {
+      background: var(--amber);
+      border-color: var(--amber);
+      color: #000;
+    }
+
+    .btn-primary:hover {
+      background: #f0b845;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--dim);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--dim);
+      color: var(--text);
+    }
+
+    .btn-dl {
+      background: var(--green);
+      border-color: var(--green);
+      color: #000;
+      font-size: 15px;
+      padding: 11px 30px;
+    }
+
+    .btn-dl:hover {
+      background: #4de89f;
+    }
+
+    .pill {
+      display: inline-block;
+      background: var(--amber);
+      color: #000;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 520px) {
+      .svc-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .ch-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="hdr">
+    <h1>EGG</h1>
+    <span>Chirp CSV Generator</span>
+  </div>
+
+  <!-- STEP INDICATOR -->
+  <div class="stepper" id="stepper">
+    <div class="step-wrap active" data-s="1">
+      <div class="step-dot">1</div>
+      <div class="step-lbl">Radio Service</div>
+    </div>
+    <div class="step-wrap" data-s="2">
+      <div class="step-dot">2</div>
+      <div class="step-lbl">Channels</div>
+    </div>
+    <div class="step-wrap" data-s="3">
+      <div class="step-dot">3</div>
+      <div class="step-lbl">Privacy</div>
+    </div>
+    <div class="step-wrap" data-s="4" id="si4">
+      <div class="step-dot">4</div>
+      <div class="step-lbl">Repeaters</div>
+    </div>
+    <div class="step-wrap" data-s="5">
+      <div class="step-dot">5</div>
+      <div class="step-lbl">Output</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ STEP 1 ═══════════════════════ -->
+  <div class="card" id="s1">
+    <h2>Select Service</h2>
+    <p class="sub">Select one or more services — they can be programmed together into a single CSV</p>
+
+    <div class="svc-grid" style="grid-template-columns:repeat(3,1fr);">
+      <label class="svc-card" id="sc-frs">
+        <input type="checkbox" name="svc" value="frs">
+        <div class="svc-name">FRS</div>
+        <div class="svc-full">Family Radio Service</div>
+        <div class="svc-note">No license · Ch 1–22 · Low power · Simplex only · No repeater access</div>
+      </label>
+      <label class="svc-card" id="sc-gmrs">
+        <input type="checkbox" name="svc" value="gmrs">
+        <div class="svc-name">GMRS</div>
+        <div class="svc-full">General Mobile Radio Service</div>
+        <div class="svc-note">FCC license required · Higher power · Ch 1–22 + repeater pairs 15R–22R</div>
+      </label>
+      <label class="svc-card" id="sc-murs">
+        <input type="checkbox" name="svc" value="murs">
+        <div class="svc-name">MURS</div>
+        <div class="svc-full">Multi-Use Radio Service</div>
+        <div class="svc-note">No license · 5 channels · 2W max · VHF · Simplex only</div>
+      </label>
+    </div>
+
+    <div class="nav">
+      <span></span>
+      <button class="btn btn-primary" id="s1next">Next &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ STEP 2 ═══════════════════════ -->
+  <div class="card hidden" id="s2">
+    <h2>Select Channels <span class="pill" id="chPill">0</span></h2>
+    <p class="sub">Check the channels you want to include in the output CSV</p>
+
+    <div style="margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;width:fit-content;">
+        <input type="checkbox" id="advancedMode"
+          style="width:14px;height:14px;accent-color:var(--amber);flex-shrink:0;">
+        <span style="font-size:14px;font-weight:600;letter-spacing:.04em;color:var(--bright);">Advanced
+          Configuration</span>
+      </label>
+    </div>
+
+    <div class="ch-ctrl">
+      <button class="btn-xs" id="selAll">Select All</button>
+      <button class="btn-xs" id="selNone">Clear</button>
+      <span class="mono" id="chLbl">0 channels selected</span>
+    </div>
+
+    <!-- FRS section -->
+    <div id="frsSect">
+      <div class="sect-hdr hidden" id="frsSectHdr">FRS</div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 1–7 &mdash; 462 MHz</div>
+        <div class="ch-grid" id="grp17f"></div>
+      </div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 8–14 &mdash; 467 MHz</div>
+        <div class="ch-grid" id="grp814f"></div>
+      </div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 15–22 &mdash; 462 MHz</div>
+        <div class="ch-grid" id="grp1522f"></div>
+      </div>
+    </div>
+
+    <!-- GMRS section -->
+    <div id="gmrsSect" class="hidden">
+      <div class="sect-hdr hidden" id="gmrsSectHdr">GMRS</div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 1–7 &mdash; 462 MHz</div>
+        <div class="ch-grid" id="grp17g"></div>
+      </div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 8–14 &mdash; 467 MHz</div>
+        <div class="ch-grid" id="grp814g"></div>
+      </div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 15–22 &mdash; 462 MHz</div>
+        <div class="ch-grid" id="grp1522g"></div>
+      </div>
+      <div class="ch-group" id="grpRepWrap">
+        <div class="ch-glbl">CH 15R–22R &mdash; GMRS Repeater Pairs &mdash; RX 462 MHz / TX 467 MHz (+5.000 offset)
+        </div>
+        <div class="callout">
+          Repeater channels listen on the same 462 MHz output frequency as CH 15–22, but transmit on the corresponding
+          467 MHz input. Include these if you access GMRS repeaters.
+        </div>
+        <div class="ch-grid" id="grpRep"></div>
+      </div>
+    </div>
+
+    <!-- MURS section -->
+    <div id="mursSect" class="hidden">
+      <div class="sect-hdr hidden" id="mursSectHdr">MURS</div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 1–3 &mdash; 151–152 MHz</div>
+        <div class="ch-grid" id="grpMurs13"></div>
+      </div>
+      <div class="ch-group">
+        <div class="ch-glbl">CH 4–5 &mdash; 154 MHz</div>
+        <div class="ch-grid" id="grpMurs45"></div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" id="s2back">&larr; Back</button>
+      <button class="btn btn-ghost" id="s2reset">Reset</button>
+      <button class="btn btn-primary" id="s2next">Next &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ STEP 3 ═══════════════════════ -->
+  <div class="card hidden" id="s3">
+    <h2>Privacy Code</h2>
+    <p class="sub">Squelch coding reduces unwanted chatter — it does not encrypt transmissions</p>
+
+    <div class="dcs-opts">
+      <label class="r-row sel" id="r-none">
+        <input type="radio" name="privType" value="none" checked>
+        <div>
+          <div class="r-lbl">No Privacy Code</div>
+          <div class="r-desc">Open squelch — radio opens on all traffic regardless of coding</div>
+        </div>
+      </label>
+      <label class="r-row" id="r-dcs">
+        <input type="radio" name="privType" value="dcs">
+        <div>
+          <div class="r-lbl">DCS (Digital-Coded Squelch)</div>
+          <div class="r-desc">Digital subaudible data burst — 83 standard codes</div>
+        </div>
+      </label>
+      <label class="r-row" id="r-ctcss">
+        <input type="radio" name="privType" value="ctcss">
+        <div>
+          <div class="r-lbl">Tone (CTCSS)</div>
+          <div class="r-desc">Continuous Tone-Coded Squelch System — subaudible analog tone, 38 standard frequencies
+          </div>
+        </div>
+      </label>
+    </div>
+
+    <!-- ── CTCSS sub-panel ── -->
+    <div id="ctcssOpts" class="hidden"
+      style="margin-top:8px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;">
+      <div class="form-row" style="margin-top:0;align-items:flex-end;">
+        <div class="field" id="ctcssFreqWrap">
+          <label>CTCSS Tone</label>
+          <select id="ctcssFreq" style="width:130px;"></select>
+        </div>
+        <div class="field" style="padding-bottom:2px;">
+          <label
+            style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;letter-spacing:0;font-size:12px;">
+            <input type="checkbox" id="ctcssRandom" style="accent-color:var(--amber);width:13px;height:13px;">
+            Randomize — unique tone per channel
+          </label>
+        </div>
+        <div class="field">
+          <label>Squelch Mode</label>
+          <select id="ctcssSquelch" style="width:280px;">
+            <option value="TSQL">TSQL — Encode TX + Squelch on RX (standard)</option>
+            <option value="Tone">Tone — Encode TX only, open RX squelch</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DCS sub-panel ── -->
+    <div id="dcsOpts" class="hidden"
+      style="margin-top:8px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:3px;">
+      <div class="dcs-opts" style="margin-bottom:14px;">
+        <label class="r-row sel" id="r-dcs-single">
+          <input type="radio" name="dcsM" value="single" checked>
+          <div>
+            <div class="r-lbl">Single Shared Code</div>
+            <div class="r-desc">All selected channels use the same DCS code — best for a coordinated group</div>
+          </div>
+        </label>
+        <label class="r-row" id="r-dcs-random">
+          <input type="radio" name="dcsM" value="random">
+          <div>
+            <div class="r-lbl">Unique Code Per Channel</div>
+            <div class="r-desc">Each channel is randomly assigned a different code from the 104-code standard DCS set
+            </div>
+          </div>
+        </label>
+      </div>
+      <div id="singleOpts" class="form-row" style="margin-top:0;">
+        <div class="field">
+          <label>DCS Code</label>
+          <select id="dcsCode" style="width:110px;"></select>
+        </div>
+        <div class="field">
+          <label>Polarity</label>
+          <select id="dcsPolS" style="width:240px;">
+            <option value="NN">NN — Normal TX / Normal RX (standard)</option>
+            <option value="NR">NR — Normal TX / Inverted RX</option>
+            <option value="RN">RN — Inverted TX / Normal RX</option>
+            <option value="RR">RR — Inverted TX / Inverted RX</option>
+          </select>
+        </div>
+      </div>
+      <div id="randomOpts" class="hidden" style="margin-top:0;">
+        <div class="form-row">
+          <div class="field">
+            <label>Polarity</label>
+            <select id="dcsPolR" style="width:260px;">
+              <option value="NN">NN — Normal TX / Normal RX (standard)</option>
+              <option value="NR">NR — Normal TX / Inverted RX</option>
+              <option value="RN">RN — Inverted TX / Normal RX</option>
+              <option value="RR">RR — Inverted TX / Inverted RX</option>
+              <option value="RAND">Randomize polarity per channel too</option>
+            </select>
+          </div>
+        </div>
+        <div class="callout" style="margin-top:12px;margin-bottom:0;">
+          Each channel gets a unique code from the 104-code EIA DCS set. Share the generated CSV with every radio in
+          your group.
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" id="s3back">&larr; Back</button>
+      <button class="btn btn-ghost" id="s3reset">Reset</button>
+      <button class="btn btn-primary" id="s3next">Next &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ STEP 4 ═══════════════════════ -->
+  <div class="card hidden" id="s4">
+    <h2>Repeater Settings</h2>
+    <p class="sub">Customize label and tone for each selected GMRS repeater channel</p>
+
+    <div class="callout">
+      Leave <strong>Name</strong> blank to use the default (prefix + channel). Set a <strong>DCS Override</strong> only
+      if a specific repeater uses a different code than your global setting. <strong>Comment</strong> is freetext in
+      CHIRP — use it for repeater call signs or location notes.
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="rep-tbl">
+        <thead>
+          <tr>
+            <th>CH</th>
+            <th>RX Freq</th>
+            <th>TX Freq</th>
+            <th style="min-width:110px;">Name (≤8 ch)</th>
+            <th style="min-width:90px;">DCS Override</th>
+            <th>Polarity</th>
+            <th style="min-width:130px;">Comment</th>
+          </tr>
+        </thead>
+        <tbody id="repTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" id="s4back">&larr; Back</button>
+      <button class="btn btn-ghost" id="s4reset">Reset</button>
+      <button class="btn btn-primary" id="s4next">Next &rarr;</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ STEP 5 ═══════════════════════ -->
+  <div class="card hidden" id="s5">
+    <h2>Generate &amp; Download</h2>
+    <p class="sub">Configure output settings, preview, and download your CHIRP-ready CSV</p>
+
+    <div class="form-row" style="margin-bottom:18px;">
+      <div class="field">
+        <label>Starting Memory Slot</label>
+        <input type="number" id="startMem" value="1" min="0" max="999" style="width:80px;">
+      </div>
+      <div class="field" id="frsPfxWrap">
+        <label>FRS Prefix</label>
+        <input type="text" id="frsPrefix" value="FRS" maxlength="4" style="width:72px;">
+      </div>
+      <div class="field" id="gmrsPfxWrap">
+        <label>GMRS Prefix</label>
+        <input type="text" id="gmrsPrefix" value="GMRS" maxlength="4" style="width:72px;">
+      </div>
+      <div class="field" id="mursPfxWrap">
+        <label>MURS Prefix</label>
+        <input type="text" id="mursPrefix" value="MURS" maxlength="4" style="width:72px;">
+      </div>
+      <div class="field">
+        <label>Repeater Name Prefix</label>
+        <input type="text" id="repPrefix" value="RPT" maxlength="4" style="width:72px;">
+      </div>
+    </div>
+
+    <!-- Advanced per-channel config -->
+    <div id="advSection" class="hidden">
+      <div class="field" style="margin-bottom:6px;">
+        <label>Per-Channel Configuration</label>
+      </div>
+      <div style="overflow-x:auto;margin-bottom:20px;">
+        <table class="rep-tbl" id="advTable">
+          <thead>
+            <tr>
+              <th>Channel</th>
+              <th style="min-width:90px;">Name</th>
+              <th>Bandwidth</th>
+              <th>Tone Mode</th>
+              <th style="min-width:120px;">Tone Value</th>
+              <th style="min-width:80px;">Power</th>
+              <th style="min-width:140px;">Comment</th>
+            </tr>
+          </thead>
+          <tbody id="advBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:6px;">
+      <label>CSV Preview</label>
+    </div>
+    <div class="preview" id="csvPrev"></div>
+
+    <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+      <button class="btn btn-dl" id="dlBtn">&#8595; Download CSV</button>
+      <button class="btn-xs" id="refreshPrev" style="font-size:12px; padding:5px 12px;">Refresh Preview</button>
+      <span id="rowCount" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--dim);"></span>
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-ghost" id="s5back">&larr; Back</button>
+      <button class="btn btn-ghost" id="s5reset">Reset</button>
+      <span></span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <script>
+    /* ── CHANNEL DATA ─────────────────────────────────────── */
+    const CH = [
+      { id: 1, f: 462.5625, svc: 'FRS/GMRS', rep: false },
+      { id: 2, f: 462.5875, svc: 'FRS/GMRS', rep: false },
+      { id: 3, f: 462.6125, svc: 'FRS/GMRS', rep: false },
+      { id: 4, f: 462.6375, svc: 'FRS/GMRS', rep: false },
+      { id: 5, f: 462.6625, svc: 'FRS/GMRS', rep: false },
+      { id: 6, f: 462.6875, svc: 'FRS/GMRS', rep: false },
+      { id: 7, f: 462.7125, svc: 'FRS/GMRS', rep: false },
+      { id: 8, f: 467.5625, svc: 'FRS/GMRS', rep: false, nfm: true },
+      { id: 9, f: 467.5875, svc: 'FRS/GMRS', rep: false, nfm: true },
+      { id: 10, f: 467.6125, svc: 'FRS/GMRS', rep: false, nfm: true },
+      { id: 11, f: 467.6375, svc: 'FRS/GMRS', rep: false, nfm: true },
+      { id: 12, f: 467.6625, svc: 'FRS/GMRS', rep: false, nfm: true },
+      { id: 13, f: 467.6875, svc: 'FRS/GMRS', rep: false, nfm: true },
+      { id: 14, f: 467.7125, svc: 'FRS/GMRS', rep: false, nfm: true },
+      { id: 15, f: 462.5500, svc: 'FRS/GMRS', rep: true },
+      { id: 16, f: 462.5750, svc: 'FRS/GMRS', rep: true },
+      { id: 17, f: 462.6000, svc: 'FRS/GMRS', rep: true },
+      { id: 18, f: 462.6250, svc: 'FRS/GMRS', rep: true },
+      { id: 19, f: 462.6500, svc: 'FRS/GMRS', rep: true },
+      { id: 20, f: 462.6750, svc: 'FRS/GMRS', rep: true },
+      { id: 21, f: 462.7000, svc: 'FRS/GMRS', rep: true },
+      { id: 22, f: 462.7250, svc: 'FRS/GMRS', rep: true },
+    ];
+
+    const MURS_CH = [
+      { id: 1, f: 151.8200, nfm: true },
+      { id: 2, f: 151.8800, nfm: true },
+      { id: 3, f: 151.9400, nfm: true },
+      { id: 4, f: 154.5700, nfm: false },
+      { id: 5, f: 154.6000, nfm: false },
+    ];
+
+    const DCS = [
+      '023', '025', '026', '031', '032', '036', '043', '047', '051', '053', '054', '065',
+      '071', '072', '073', '074', '114', '115', '116', '122', '125', '131', '132', '134',
+      '143', '145', '152', '155', '156', '162', '165', '172', '174', '175', '176', '205',
+      '212', '223', '225', '226', '243', '244', '245', '246', '251', '252', '255', '261',
+      '263', '265', '266', '271', '274', '306', '311', '315', '325', '331', '332', '343',
+      '346', '351', '356', '364', '365', '371', '411', '412', '413', '423', '431', '432',
+      '445', '446', '452', '454', '455', '462', '464', '465', '466', '503', '506'
+    ];
+    const POLS = ['NN', 'NR', 'RN', 'RR'];
+    const CTCSS = [
+      67.0, 71.9, 74.4, 77.0, 79.7, 82.5, 85.4, 88.5, 91.5, 94.8,
+      97.4, 100.0, 103.5, 107.2, 110.9, 114.8, 118.8, 123.0, 127.3, 131.8,
+      136.5, 141.3, 146.2, 151.4, 156.7, 162.2, 167.9, 173.8, 179.9, 186.2,
+      192.8, 203.5, 210.7, 218.1, 225.7, 233.6, 241.8, 250.3
+    ];
+    const POWER_OPTS = ['0.5W', '1W', '2W', '5W', '8W', '10W', '20W', '30W', '40W', '50W'];
+    function defaultPower(svc, id) {
+      if (svc === 'rep') return '50W';
+      if (svc === 'murs') return '2W';
+      if (id >= 8 && id <= 14) return '0.5W';
+      if (svc === 'frs') return '2W';
+      return id >= 15 ? '50W' : '5W';
+    }
+
+    /* ── STATE ────────────────────────────────────────────── */
+    const S = {
+      step: 1,
+      hasFRS: false,
+      hasGMRS: false,
+      hasMURS: false,
+      frsChannels: new Set(),
+      gmrsChannels: new Set(),
+      mursChannels: new Set(),
+      repeaters: new Set(),
+      advancedMode: false,
+      chAdvCfg: {},        // key 'f-1','g-8','r-15' -> {name,mode,toneMode,toneVal,dcsPol,power,comment}
+      privacyType: 'none', // 'none'|'ctcss'|'dcs'
+      ctcssFreq: '100.0',
+      ctcssRandom: false,
+      ctcssSquelch: 'TSQL',
+      rndCtcss: {},        // id -> freq string
+      dcsMode: 'single',   // 'single'|'random'
+      dcsCode: '023',
+      dcsPol: 'NN',
+      rndCodes: {},
+      repCfg: {},
+    };
+
+    /* ── UTILITIES ────────────────────────────────────────── */
+    function shuffle(a) {
+      const b = [...a];
+      for (let i = b.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [b[i], b[j]] = [b[j], b[i]];
+      }
+      return b;
+    }
+    function ff(n, d = 4) { return n.toFixed(d); }
+    function needsRepStep() {
+      return S.hasGMRS && S.repeaters.size > 0;
+    }
+
+    /* ── STEP INDICATOR ──────────────────────────────────── */
+    function updateStepper(active) {
+      document.querySelectorAll('.step-wrap').forEach(el => {
+        const n = +el.dataset.s;
+        el.classList.remove('active', 'done');
+        if (n === active) el.classList.add('active');
+        else if (n < active) el.classList.add('done');
+        el.querySelector('.step-dot').textContent = n < active ? '✓' : n;
+      });
+      document.getElementById('si4').classList.toggle('hidden',
+        !needsRepStep() && active !== 4);
+    }
+
+    function show(n) {
+      [1, 2, 3, 4, 5].forEach(i => document.getElementById('s' + i).classList.add('hidden'));
+      document.getElementById('s' + n).classList.remove('hidden');
+      S.step = n;
+      updateStepper(n);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function goNext(from) {
+      if (from === 3) { needsRepStep() ? (buildRepTable(), show(4)) : (buildPreview(), show(5)); }
+      else if (from === 4) { buildPreview(); show(5); }
+      else show(from + 1);
+    }
+    function goBack(from) {
+      if (from === 5 && !needsRepStep()) show(3);
+      else show(from - 1);
+    }
+
+    /* ── STEP 1 ───────────────────────────────────────────── */
+    document.querySelectorAll('input[name="svc"]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.value === 'frs') S.hasFRS = cb.checked;
+        else if (cb.value === 'gmrs') S.hasGMRS = cb.checked;
+        else S.hasMURS = cb.checked;
+        cb.closest('.svc-card').classList.toggle('sel', cb.checked);
+      });
+    });
+    document.getElementById('s1next').addEventListener('click', () => {
+      if (!S.hasFRS && !S.hasGMRS && !S.hasMURS) return alert('Please select at least one service.');
+      if (!S.hasFRS) S.frsChannels.clear();
+      if (!S.hasGMRS) { S.gmrsChannels.clear(); S.repeaters.clear(); }
+      if (!S.hasMURS) S.mursChannels.clear();
+      buildChGrid();
+      show(2);
+    });
+
+    /* ── STEP 2 ───────────────────────────────────────────── */
+    function buildChGrid() {
+      const multi = [S.hasFRS, S.hasGMRS, S.hasMURS].filter(Boolean).length > 1;
+
+      document.getElementById('frsSect').classList.toggle('hidden', !S.hasFRS);
+      document.getElementById('gmrsSect').classList.toggle('hidden', !S.hasGMRS);
+      document.getElementById('mursSect').classList.toggle('hidden', !S.hasMURS);
+      document.getElementById('frsSectHdr').classList.toggle('hidden', !multi);
+      document.getElementById('gmrsSectHdr').classList.toggle('hidden', !multi);
+      document.getElementById('mursSectHdr').classList.toggle('hidden', !multi);
+
+      if (S.hasFRS) {
+        buildGroup('grp17f', CH.filter(c => c.id >= 1 && c.id <= 7), S.frsChannels);
+        buildGroup('grp814f', CH.filter(c => c.id >= 8 && c.id <= 14), S.frsChannels);
+        buildGroup('grp1522f', CH.filter(c => c.id >= 15 && c.id <= 22), S.frsChannels);
+      }
+      if (S.hasGMRS) {
+        buildGroup('grp17g', CH.filter(c => c.id >= 1 && c.id <= 7), S.gmrsChannels);
+        buildGroup('grp814g', CH.filter(c => c.id >= 8 && c.id <= 14), S.gmrsChannels);
+        buildGroup('grp1522g', CH.filter(c => c.id >= 15 && c.id <= 22), S.gmrsChannels);
+        buildGroup('grpRep', CH.filter(c => c.rep), S.repeaters);
+      }
+      if (S.hasMURS) {
+        buildGroup('grpMurs13', MURS_CH.filter(c => c.id <= 3), S.mursChannels);
+        buildGroup('grpMurs45', MURS_CH.filter(c => c.id >= 4), S.mursChannels);
+      }
+      updChCount();
+    }
+
+    function buildGroup(id, channels, stateSet) {
+      const el = document.getElementById(id);
+      el.innerHTML = '';
+      const isRep = stateSet === S.repeaters;
+      channels.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'ch-item';
+        const isSelected = stateSet.has(c.id);
+        if (isSelected) item.classList.add('sel');
+
+        item.innerHTML = `
+      <input type="checkbox" ${isSelected ? 'checked' : ''}>
+      <span class="ch-num">${c.id}${isRep ? 'R' : ''}</span>
+      <span class="ch-freq">${ff(c.f)}</span>`;
+
+        const cb = item.querySelector('input');
+        cb.addEventListener('change', () => {
+          cb.checked ? stateSet.add(c.id) : stateSet.delete(c.id);
+          item.classList.toggle('sel', cb.checked);
+          updChCount();
+        });
+        item.addEventListener('click', e => { if (e.target !== cb) cb.click(); });
+        el.appendChild(item);
+      });
+    }
+
+    function updChCount() {
+      const n = S.frsChannels.size + S.gmrsChannels.size + S.mursChannels.size + S.repeaters.size;
+      document.getElementById('chPill').textContent = n;
+      document.getElementById('chLbl').textContent = `${n} channel${n !== 1 ? 's' : ''} selected`;
+    }
+
+    document.getElementById('selAll').addEventListener('click', () => {
+      document.querySelectorAll('#s2 .ch-item input[type=checkbox]').forEach(cb => {
+        if (!cb.closest('#grpRepWrap') && !cb.checked) cb.click();
+      });
+    });
+    document.getElementById('selNone').addEventListener('click', () => {
+      document.querySelectorAll('#s2 .ch-item input[type=checkbox]').forEach(cb => {
+        if (cb.checked) cb.click();
+      });
+    });
+    document.getElementById('advancedMode').addEventListener('change', e => {
+      S.advancedMode = e.target.checked;
+    });
+
+    document.getElementById('s2back').addEventListener('click', () => goBack(2));
+    document.getElementById('s2next').addEventListener('click', () => {
+      if (S.frsChannels.size + S.gmrsChannels.size + S.mursChannels.size + S.repeaters.size === 0)
+        return alert('Select at least one channel.');
+      show(3);
+    });
+
+    /* ── STEP 3 ───────────────────────────────────────────── */
+    // Populate CTCSS dropdown
+    const ctcssEl = document.getElementById('ctcssFreq');
+    CTCSS.forEach(f => {
+      const o = document.createElement('option');
+      o.value = f.toFixed(1); o.textContent = `${f.toFixed(1)} Hz`;
+      if (f === 100.0) o.selected = true;
+      ctcssEl.appendChild(o);
+    });
+
+    // Populate DCS dropdown
+    const dcsEl = document.getElementById('dcsCode');
+    DCS.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d; o.textContent = `D${d}`;
+      dcsEl.appendChild(o);
+    });
+
+    // Top-level privacy type
+    document.querySelectorAll('input[name="privType"]').forEach(r => {
+      r.addEventListener('change', () => {
+        ['none', 'ctcss', 'dcs'].forEach(v =>
+          document.getElementById('r-' + v).classList.toggle('sel', v === r.value));
+        document.getElementById('ctcssOpts').classList.toggle('hidden', r.value !== 'ctcss');
+        document.getElementById('dcsOpts').classList.toggle('hidden', r.value !== 'dcs');
+      });
+    });
+
+    // CTCSS randomize checkbox
+    document.getElementById('ctcssRandom').addEventListener('change', e => {
+      document.getElementById('ctcssFreqWrap').style.opacity = e.target.checked ? '0.35' : '1';
+      document.getElementById('ctcssFreqWrap').style.pointerEvents = e.target.checked ? 'none' : '';
+    });
+
+    // DCS sub-mode
+    document.querySelectorAll('input[name="dcsM"]').forEach(r => {
+      r.addEventListener('change', () => {
+        document.getElementById('r-dcs-single').classList.toggle('sel', r.value === 'single');
+        document.getElementById('r-dcs-random').classList.toggle('sel', r.value === 'random');
+        document.getElementById('singleOpts').classList.toggle('hidden', r.value !== 'single');
+        document.getElementById('randomOpts').classList.toggle('hidden', r.value !== 'random');
+      });
+    });
+
+    document.getElementById('s3back').addEventListener('click', () => goBack(3));
+    document.getElementById('s3next').addEventListener('click', () => {
+      S.privacyType = document.querySelector('input[name="privType"]:checked').value;
+      S.ctcssFreq = document.getElementById('ctcssFreq').value;
+      S.ctcssRandom = document.getElementById('ctcssRandom').checked;
+      S.ctcssSquelch = document.getElementById('ctcssSquelch').value;
+      S.dcsMode = document.querySelector('input[name="dcsM"]:checked').value;
+      S.dcsCode = document.getElementById('dcsCode').value;
+      S.dcsPol = S.dcsMode === 'single'
+        ? document.getElementById('dcsPolS').value
+        : document.getElementById('dcsPolR').value;
+
+      const allIds = [...new Set([...S.frsChannels, ...S.gmrsChannels, ...S.mursChannels, ...S.repeaters])];
+
+      if (S.privacyType === 'ctcss' && S.ctcssRandom) {
+        const sh = shuffle(CTCSS);
+        allIds.forEach((id, i) => { S.rndCtcss[id] = sh[i % CTCSS.length].toFixed(1); });
+      }
+      if (S.privacyType === 'dcs' && S.dcsMode === 'random') {
+        const sh = shuffle(DCS);
+        allIds.forEach((id, i) => { S.rndCodes[id] = sh[i % DCS.length]; });
+      }
+      goNext(3);
+    });
+
+    /* ── STEP 4 ───────────────────────────────────────────── */
+    function buildRepTable() {
+      const tb = document.getElementById('repTbody');
+      tb.innerHTML = '';
+      const prefix = document.getElementById('repPrefix').value || 'RPT';
+      [...S.repeaters].sort((a, b) => a - b).forEach(id => {
+        const c = CH.find(x => x.id === id);
+        const cfg = S.repCfg[id] || {};
+        const tx = ff(c.f + 5);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+      <td style="color:var(--blue);font-weight:700;">${id}R</td>
+      <td>${ff(c.f)}</td>
+      <td>${tx}</td>
+      <td><input type="text" placeholder="${prefix}${id}R" value="${cfg.name || ''}" data-rf="${id}-name" maxlength="8"></td>
+      <td><select data-rf="${id}-dcs">
+        <option value="">— inherit —</option>
+        ${DCS.map(d => `<option value="${d}"${cfg.dcsOvr === d ? ' selected' : ''}>D${d}</option>`).join('')}
+      </select></td>
+      <td><select data-rf="${id}-pol">
+        ${POLS.map(p => `<option value="${p}"${(cfg.pol || 'NN') === p ? ' selected' : ''}>${p}</option>`).join('')}
+      </select></td>
+      <td><input type="text" placeholder="optional" value="${cfg.comment || ''}" data-rf="${id}-comment" maxlength="32"></td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    function saveRepCfg() {
+      document.querySelectorAll('[data-rf]').forEach(el => {
+        const [id, fld] = el.getAttribute('data-rf').split('-');
+        if (!S.repCfg[id]) S.repCfg[id] = {};
+        const key = fld === 'dcs' ? 'dcsOvr' : fld === 'pol' ? 'pol' : fld;
+        S.repCfg[id][key] = el.value;
+      });
+    }
+
+    document.getElementById('s4back').addEventListener('click', () => { saveRepCfg(); goBack(4); });
+    document.getElementById('s4next').addEventListener('click', () => { saveRepCfg(); goNext(4); });
+
+    /* ── ADVANCED CONFIG ──────────────────────────────────── */
+    function advKey(svc, id) { return `${svc}-${id}`; }
+
+    function defaultToneFields(id) {
+      // Returns {toneMode, toneVal, dcsPol} based on global privacy settings
+      if (S.privacyType === 'ctcss') {
+        const freq = S.ctcssRandom ? (S.rndCtcss[id] || S.ctcssFreq) : S.ctcssFreq;
+        return { toneMode: S.ctcssSquelch, toneVal: freq, dcsPol: 'NN' };
+      }
+      if (S.privacyType === 'dcs') {
+        const code = S.dcsMode === 'random' ? (S.rndCodes[id] || S.dcsCode) : S.dcsCode;
+        const pol = S.dcsPol === 'RAND' ? POLS[Math.floor(Math.random() * 4)] : (S.dcsPol || 'NN');
+        return { toneMode: 'DTCS', toneVal: code, dcsPol: pol };
+      }
+      return { toneMode: '', toneVal: '', dcsPol: 'NN' };
+    }
+
+    function buildAdvancedTable() {
+      const tbody = document.getElementById('advBody');
+      tbody.innerHTML = '';
+
+      const fPfx = document.getElementById('frsPrefix').value || 'FRS';
+      const gPfx = document.getElementById('gmrsPrefix').value || 'GMRS';
+      const mPfx = document.getElementById('mursPrefix').value || 'MURS';
+      const rPfx = document.getElementById('repPrefix').value || 'RPT';
+
+      const entries = [
+        ...[...S.frsChannels].sort((a, b) => a - b).map(id => ({
+          key: advKey('f', id), label: `FRS ${id}`, defName: fPfx + id,
+          defMode: 'NFM', defPower: defaultPower('frs', id), id
+        })),
+        ...[...S.gmrsChannels].sort((a, b) => a - b).map(id => {
+          const c = CH.find(x => x.id === id);
+          return {
+            key: advKey('g', id), label: `GMRS ${id}`, defName: gPfx + id,
+            defMode: c.nfm ? 'NFM' : 'FM', defPower: defaultPower('gmrs', id), id
+          };
+        }),
+        ...[...S.mursChannels].sort((a, b) => a - b).map(id => {
+          const c = MURS_CH.find(x => x.id === id);
+          return {
+            key: advKey('m', id), label: `MURS ${id}`, defName: mPfx + id,
+            defMode: c.nfm ? 'NFM' : 'FM', defPower: defaultPower('murs', id), id
+          };
+        }),
+        ...[...S.repeaters].sort((a, b) => a - b).map(id => ({
+          key: advKey('r', id), label: `${id}R (REP)`, defName: rPfx + id + 'R',
+          defMode: 'FM', defPower: defaultPower('rep', id), id
+        })),
+      ];
+
+      entries.forEach(({ key, label, defName, defMode, defPower, id }) => {
+        const cfg = S.chAdvCfg[key] || {};
+        const dTone = defaultToneFields(id);
+        const toneMode = cfg.toneMode !== undefined ? cfg.toneMode : dTone.toneMode;
+        const toneVal = cfg.toneVal !== undefined ? cfg.toneVal : dTone.toneVal;
+        const curPower = cfg.power || defPower;
+        const powerOpts = POWER_OPTS.map(w =>
+          `<option value="${w}"${curPower === w ? ' selected' : ''}>${w}</option>`).join('');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+      <td style="color:var(--dim);white-space:nowrap;">${label}</td>
+      <td><input type="text" value="${cfg.name || defName}" data-adv="${key}-name" data-defname="${defName}" maxlength="8"></td>
+      <td><select data-adv="${key}-mode">
+        <option value="NFM"${(cfg.mode || defMode) === 'NFM' ? ' selected' : ''}>NFM</option>
+        <option value="FM"${(cfg.mode || defMode) === 'FM' ? ' selected' : ''}>FM</option>
+      </select></td>
+      <td><select data-adv="${key}-toneMode">
+        <option value=""${toneMode === '' ? ' selected' : ''}>None</option>
+        <option value="Tone"${toneMode === 'Tone' ? ' selected' : ''}>Tone</option>
+        <option value="TSQL"${toneMode === 'TSQL' ? ' selected' : ''}>TSQL</option>
+        <option value="DTCS"${toneMode === 'DTCS' ? ' selected' : ''}>DTCS</option>
+      </select></td>
+      <td><input type="text" value="${toneVal}" placeholder="e.g. 100.0 or 023" data-adv="${key}-toneVal" style="width:100%;"></td>
+      <td><select data-adv="${key}-power">${powerOpts}</select></td>
+      <td><input type="text" value="${cfg.comment || ''}" placeholder="optional" data-adv="${key}-comment" maxlength="32" style="width:100%;"></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function saveAdvancedTable() {
+      document.querySelectorAll('[data-adv]').forEach(el => {
+        const parts = el.getAttribute('data-adv').split('-');
+        const field = parts.pop();
+        const key = parts.join('-');
+        if (!S.chAdvCfg[key]) S.chAdvCfg[key] = {};
+        // Only save name if the user changed it from the generated default
+        if (field === 'name') {
+          const defName = el.getAttribute('data-defname') || '';
+          S.chAdvCfg[key].name = el.value !== defName ? el.value : '';
+        } else {
+          S.chAdvCfg[key][field] = el.value;
+        }
+      });
+    }
+
+    /* ── STEP 5 / CSV GENERATION ─────────────────────────── */
+    function toneFields(id, isRep) {
+      // Repeater cfg override takes priority
+      const repCfg = isRep ? (S.repCfg[id] || {}) : {};
+      if (isRep && repCfg.dcsOvr) {
+        const pol = repCfg.pol || S.dcsPol || 'NN';
+        return {
+          Tone: 'DTCS', rToneFreq: '88.5', cToneFreq: '88.5',
+          DtcsCode: repCfg.dcsOvr, DtcsPolarity: pol
+        };
+      }
+
+      if (S.privacyType === 'ctcss') {
+        const freq = S.ctcssRandom ? (S.rndCtcss[id] || S.ctcssFreq) : S.ctcssFreq;
+        const mode = S.ctcssSquelch; // 'Tone' or 'TSQL'
+        return {
+          Tone: mode,
+          rToneFreq: freq, cToneFreq: freq,
+          DtcsCode: '023', DtcsPolarity: 'NN'
+        };
+      }
+      if (S.privacyType === 'dcs') {
+        const code = S.dcsMode === 'random' ? (S.rndCodes[id] || S.dcsCode) : S.dcsCode;
+        const pol = S.dcsPol === 'RAND' ? POLS[Math.floor(Math.random() * 4)] : (S.dcsPol || 'NN');
+        if (isRep && repCfg.pol) {
+          return {
+            Tone: 'DTCS', rToneFreq: '88.5', cToneFreq: '88.5',
+            DtcsCode: code, DtcsPolarity: repCfg.pol
+          };
+        }
+        return {
+          Tone: 'DTCS', rToneFreq: '88.5', cToneFreq: '88.5',
+          DtcsCode: code, DtcsPolarity: pol
+        };
+      }
+      return { Tone: '', rToneFreq: '', cToneFreq: '', DtcsCode: '', DtcsPolarity: '' };
+    }
+
+    function applyAdvCfg(row, key, defMode) {
+      if (!S.advancedMode) return;
+      const cfg = S.chAdvCfg[key];
+      if (!cfg) return;
+      if (cfg.name) row.Name = cfg.name;
+      if (cfg.mode) row.Mode = cfg.mode;
+      if (cfg.power) row.Power = cfg.power;
+      if (cfg.comment) row.Comment = cfg.comment;
+      if (cfg.toneMode !== undefined && cfg.toneMode !== '') {
+        const val = cfg.toneVal || '';
+        if (cfg.toneMode === 'Tone' || cfg.toneMode === 'TSQL') {
+          row.Tone = cfg.toneMode; row.rToneFreq = val; row.cToneFreq = val;
+        } else if (cfg.toneMode === 'DTCS') {
+          row.Tone = 'DTCS'; row.DtcsCode = val || '023';
+        } else if (cfg.toneMode === '') {
+          row.Tone = ''; row.rToneFreq = '88.5'; row.cToneFreq = '88.5';
+        }
+      }
+    }
+
+    function buildRows() {
+      const fPfx = document.getElementById('frsPrefix').value || 'FRS';
+      const gPfx = document.getElementById('gmrsPrefix').value || 'GMRS';
+      const rpfx = document.getElementById('repPrefix').value || 'RPT';
+      const base = parseInt(document.getElementById('startMem').value) || 0;
+      const rows = [];
+
+      const mPfx = document.getElementById('mursPrefix').value || 'MURS';
+
+      [...S.frsChannels].sort((a, b) => a - b).forEach(id => {
+        const c = CH.find(x => x.id === id);
+        const tf = toneFields(id, false);
+        const row = {
+          Location: base + rows.length, Name: fPfx + id,
+          Frequency: ff(c.f), Duplex: '', Offset: '0.000',
+          ...tf, Mode: 'NFM', TStep: '12.5', Skip: '', Power: defaultPower('frs', id), Comment: '',
+          URCALL: '', RPT1CALL: '', RPT2CALL: ''
+        };
+        applyAdvCfg(row, advKey('f', id), 'NFM');
+        rows.push(row);
+      });
+
+      [...S.gmrsChannels].sort((a, b) => a - b).forEach(id => {
+        const c = CH.find(x => x.id === id);
+        const tf = toneFields(id, false);
+        const defMode = c.nfm ? 'NFM' : 'FM';
+        const row = {
+          Location: base + rows.length, Name: gPfx + id,
+          Frequency: ff(c.f), Duplex: '', Offset: '0.000',
+          ...tf, Mode: defMode, TStep: '12.5', Skip: '', Power: defaultPower('gmrs', id), Comment: '',
+          URCALL: '', RPT1CALL: '', RPT2CALL: ''
+        };
+        applyAdvCfg(row, advKey('g', id), defMode);
+        rows.push(row);
+      });
+
+      [...S.mursChannels].sort((a, b) => a - b).forEach(id => {
+        const c = MURS_CH.find(x => x.id === id);
+        const tf = toneFields(id, false);
+        const defMode = c.nfm ? 'NFM' : 'FM';
+        const row = {
+          Location: base + rows.length, Name: mPfx + id,
+          Frequency: ff(c.f), Duplex: '', Offset: '0.000',
+          ...tf, Mode: defMode, TStep: '12.5', Skip: '', Power: defaultPower('murs', id), Comment: '',
+          URCALL: '', RPT1CALL: '', RPT2CALL: ''
+        };
+        applyAdvCfg(row, advKey('m', id), defMode);
+        rows.push(row);
+      });
+
+      [...S.repeaters].sort((a, b) => a - b).forEach(id => {
+        const tf = toneFields(id, true);
+        const name = cfg.name || rpfx + id + 'R';
+        const row = {
+          Location: base + rows.length, Name: name,
+          Frequency: ff(c.f), Duplex: '+', Offset: '5.000',
+          ...tf, Mode: 'FM', TStep: '12.5', Skip: '', Power: defaultPower('rep', id), Comment: cfg.comment || '',
+          URCALL: '', RPT1CALL: '', RPT2CALL: ''
+        };
+        applyAdvCfg(row, advKey('r', id), 'FM');
+        rows.push(row);
+      });
+
+      return rows;
+    }
+
+    const HDR = ['Location', 'Name', 'Frequency', 'Duplex', 'Offset', 'Tone', 'rToneFreq', 'cToneFreq', 'DtcsCode', 'DtcsPolarity', 'Mode', 'TStep', 'Skip', 'Power', 'Comment', 'URCALL', 'RPT1CALL', 'RPT2CALL'];
+
+    function toCSV(rows) {
+      return [HDR.join(','), ...rows.map(r => HDR.map(h => r[h] ?? '').join(','))].join('\r\n');
+    }
+
+    function buildPreview() {
+      const advSection = document.getElementById('advSection');
+      if (S.advancedMode) {
+        saveAdvancedTable();          // persist edits to state first
+        advSection.classList.remove('hidden');
+        buildAdvancedTable();         // rebuild from state
+      } else {
+        advSection.classList.add('hidden');
+      }
+      const rows = buildRows();
+      const csv = toCSV(rows);
+      const lines = csv.split('\r\n');
+      let html = '';
+      lines.forEach((l, i) => {
+        html += `<span class="${i === 0 ? 'hdr-row' : 'data-row'}">${l}\n</span>`;
+      });
+      document.getElementById('csvPrev').innerHTML = html;
+      document.getElementById('rowCount').textContent = `${rows.length} channel${rows.length !== 1 ? 's' : ''} → ${rows.length} memory slots`;
+      window._csv = csv;
+      window._svc = S.svc;
+    }
+
+    ['startMem', 'frsPrefix', 'gmrsPrefix', 'mursPrefix', 'repPrefix'].forEach(id => {
+      document.getElementById(id).addEventListener('input', buildPreview);
+    });
+    document.getElementById('refreshPrev').addEventListener('click', buildPreview);
+
+    document.getElementById('dlBtn').addEventListener('click', () => {
+      buildPreview();
+      if (!window._csv) return;
+      const blob = new Blob([window._csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const svcs = [S.hasFRS && 'frs', S.hasGMRS && 'gmrs', S.hasMURS && 'murs'].filter(Boolean);
+      a.download = `chirp_${svcs.join('_')}_channels.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('s5back').addEventListener('click', () => goBack(5));
+
+    function resetAll() {
+      S.svc = null;
+      S.frsChannels.clear(); S.gmrsChannels.clear(); S.repeaters.clear();
+      S.advancedMode = false; S.chAdvCfg = {};
+      document.getElementById('advBody').innerHTML = '';
+      document.getElementById('advSection').classList.add('hidden');
+      S.privacyType = 'none'; S.ctcssFreq = '100.0';
+      S.ctcssRandom = false; S.ctcssSquelch = 'TSQL';
+      S.rndCtcss = {}; S.dcsMode = 'single'; S.dcsCode = '023';
+      S.dcsPol = 'NN'; S.rndCodes = {}; S.repCfg = {};
+      S.hasFRS = false; S.hasGMRS = false; S.hasMURS = false;
+      S.frsChannels.clear(); S.gmrsChannels.clear(); S.mursChannels.clear(); S.repeaters.clear();
+      document.querySelectorAll('input[name="svc"]').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.svc-card').classList.remove('sel');
+      });
+      document.getElementById('startMem').value = '1';
+      document.getElementById('frsPrefix').value = 'FRS';
+      document.getElementById('gmrsPrefix').value = 'GMRS';
+      document.getElementById('mursPrefix').value = 'MURS';
+      document.getElementById('repPrefix').value = 'RPT';
+      document.getElementById('advancedMode').checked = false;
+      document.querySelector('input[name="privType"][value="none"]').checked = true;
+      ['none', 'ctcss', 'dcs'].forEach(v =>
+        document.getElementById('r-' + v).classList.toggle('sel', v === 'none'));
+      document.getElementById('ctcssOpts').classList.add('hidden');
+      document.getElementById('dcsOpts').classList.add('hidden');
+      document.getElementById('ctcssRandom').checked = false;
+      document.getElementById('ctcssFreqWrap').style.opacity = '';
+      document.getElementById('ctcssFreqWrap').style.pointerEvents = '';
+      document.getElementById('ctcssSquelch').value = 'TSQL';
+      const ctcssFreqEl = document.getElementById('ctcssFreq');
+      if (ctcssFreqEl) ctcssFreqEl.value = '100.0';
+      document.querySelector('input[name="dcsM"][value="single"]').checked = true;
+      document.getElementById('r-dcs-single').classList.add('sel');
+      document.getElementById('r-dcs-random').classList.remove('sel');
+      document.getElementById('singleOpts').classList.remove('hidden');
+      document.getElementById('randomOpts').classList.add('hidden');
+      const dcsCodeEl = document.getElementById('dcsCode');
+      if (dcsCodeEl) dcsCodeEl.value = '023';
+      document.getElementById('dcsPolS').value = 'NN';
+      document.getElementById('dcsPolR').value = 'NN';
+      show(1);
+    }
+
+    ['s2reset', 's3reset', 's4reset', 's5reset'].forEach(id => {
+      document.getElementById(id).addEventListener('click', resetAll);
+    });
+  </script>
+</body>
+
+</html>
